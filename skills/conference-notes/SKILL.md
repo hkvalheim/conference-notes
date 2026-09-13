@@ -154,6 +154,26 @@ Read the resulting `.txt` files with the Read tool - typically ~40-60KB for a
 one-hour talk. Transcripts carry details, anecdotes, and numbers that notes
 and photos alone don't capture - use them actively to enrich the write-ups.
 
+### Spot-check caption quality before trusting it
+
+YouTube's auto-captions are machine-generated and their quality is
+inconsistent **per video, not per channel or per uploader** - two talks from
+the exact same channel can differ from clean to unusable. Before writing a
+single sentence of the post from a downloaded transcript, skim at least the
+first page of the parsed `.txt` for tell-tale corruption: words or phrases
+that don't belong to the talk's language or topic at all (stray website
+names, unrelated brand names, garbled fragments repeating mid-sentence).
+Don't assume a transcript is fine just because a previous video from the
+same source worked, and don't assume it's broken just because a previous one
+was - check each one on its own.
+
+If it's corrupted, don't try to patch it up - fall back to a local
+transcription exactly as Phase 0b does for Vimeo: download the video
+(`yt-dlp -f "bestvideo[height<=1080]+bestaudio/best[height<=1080]"`) and run
+`mlx_whisper` against it, then feed the resulting `.vtt` into the same
+`parse_vtt.py`. This local-transcription fallback isn't Vimeo-specific - it's
+the answer any time a source's native captions are missing *or* unusable.
+
 ### Rate limiting on the caption endpoint
 
 YouTube's caption endpoint throttles independently of the video endpoint -
@@ -365,6 +385,38 @@ distinct workflow from Phases 0-4, not a repeat of them:
 
 ---
 
+## Growing an Existing Site Over Time
+
+Most repeat runs of this skill aren't "scaffold a whole site from a pile of
+assets" (Phases 1-5 once) - they're "add one more talk to a site that's
+already live," repeated every time a good talk turns up. That's a distinct,
+lighter workflow with its own gotchas:
+
+- **Give every post an explicit, machine-findable date.** Use a
+  `**Published:**` (or `**Talk date:**` if the two differ, e.g. a conference
+  talk recorded months before the recording was uploaded) line near the top
+  of the post, in a consistent format (`DD Month YYYY`) - the same line
+  already used for `**Speaker:**`/`**Source:**`/`**Length:**`. This is what
+  makes reordering later mechanical `grep` work instead of re-reading every
+  post to remember when it happened.
+- **Insert new posts in date order, don't append.** When adding a talk to a
+  site that already has others, place its entry in `mkdocs.yml`'s nav list
+  and in `docs/index.md`'s post listing at its chronological position among
+  the existing posts (by the date above), not at the end of the list. If the
+  user hasn't said which date to sort by, ask once, then stay consistent -
+  don't mix "upload date" for some posts and "original talk date" for others
+  on the same site.
+- **Multi-part series get a shared slug and two-way links.** For an
+  interview or talk split across multiple videos (e.g. `..._part-1.md`,
+  `..._part-2.md`), use one shared slug prefix with a `-part-N` suffix, and
+  add a "Further reading" link from each part to every other part - a reader
+  landing on part 2 first still needs a way to find part 1.
+- **Re-run `mkdocs build --strict` after any reorder**, not just after
+  adding new content - a manual nav edit is exactly the kind of change a
+  stray indentation or missing colon slips into unnoticed.
+
+---
+
 ## Phase 1 - Read the Photos
 
 iPhone HEIC files are too large for the Read tool (>256KB). Convert to small
@@ -396,6 +448,14 @@ Create one markdown file per talk in `docs/`:
   `[▶ Watch this moment](URL&t=Ns)` right after it is enough.
 - Structure per talk: intro → main sections with photos → key takeaways → links/further reading.
 - Create `docs/index.md` with the talk list, cross-cutting themes, and a glossary.
+- **Verify every external link before publishing, not just the source
+  video/URL.** "Further reading" links (official write-ups, research pages,
+  related talks) rot or get reorganized independently of the source
+  recording - fetch each one (e.g. with a web-fetch tool) and confirm it
+  resolves before including it. If an obvious canonical link 404s, look for
+  the organization's own current URL for that resource rather than linking
+  to a mirror or an outdated path - a dead link in a "further reading"
+  section is worse than no link at all.
 
 ---
 
@@ -599,11 +659,14 @@ extra secrets or broader access are needed.
 ## Verification
 
 - [ ] Every talk with source material has a `docs/<talk>.md` page
+- [ ] Downloaded transcripts were spot-checked for garbled/corrupted captions before being used, and re-transcribed locally (`mlx-whisper`) if unusable
 - [ ] Vimeo-sourced talks have both a transcript-derived write-up and at least one extracted screenshot
 - [ ] Every screenshot was picked from a quote/claim already in the prose, not a blind interval sample
 - [ ] Talking-head-only and PDF-only sources were identified by probing first and explicitly skipped, not forced
 - [ ] Every quote and screenshot links back to its exact `&t=Ns` timestamp in the source video (or Vimeo's `#t=Ns` fragment)
+- [ ] Every external "further reading"/reference link was verified to resolve, not just the source recording link
 - [ ] `docs/index.md` lists all talks with cross-cutting themes and a glossary
+- [ ] Each post has an explicit, consistently-formatted publish/talk date, and both `mkdocs.yml`'s nav and `docs/index.md`'s list are ordered chronologically by it, not by add-order
 - [ ] Photos render inline on their talk pages, sized for the repo (Phase 4, not the Phase 1 preview crops)
 - [ ] `.gitignore` uses rooted patterns for HEIC-original folders (macOS case-insensitivity gotcha)
 - [ ] GitHub Pages `build_type` is `legacy` with source `gh-pages` (checked via `gh api repos/OWNER/REPO/pages`)
