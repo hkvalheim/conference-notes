@@ -14,4 +14,14 @@ jobs:
         with:
           python-version: 3.x
       - run: pip install mkdocs-material
-      - run: mkdocs gh-deploy --force
+      - run: |
+          for attempt in 1 2 3; do
+            if mkdocs gh-deploy --force; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            echo "mkdocs gh-deploy failed on attempt $attempt; retrying in 10 seconds..."
+            sleep 10
+          done
