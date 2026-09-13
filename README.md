@@ -11,6 +11,8 @@ to the exact timestamp in the source recording.
 📖 **Full docs, security considerations, and use cases:**
 https://hkvalheim.github.io/conference-notes/
 
+![conference-notes documentation site](assets/screenshot.png)
+
 ## What it does
 
 - Fetches a talk's transcript (native captions when available, local
