@@ -11,7 +11,8 @@ to the exact timestamp in the source recording.
 📖 **Full docs, security considerations, and use cases:**
 https://hkvalheim.github.io/conference-notes/
 
-![conference-notes documentation site](assets/screenshot.png)
+![A talk page produced by this skill: an extracted slide screenshot inline with the write-up](assets/example-output.png)
+*A real talk page from [javazone-2026](https://hkvalheim.github.io/javazone-2026/), a site generated with this skill — one of the [use cases](https://hkvalheim.github.io/conference-notes/use-cases/standalone-site/) on the docs site.*
 
 ## What it does
 

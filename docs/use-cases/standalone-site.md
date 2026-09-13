@@ -4,6 +4,8 @@ The most direct use of this skill: one conference, one new repo, one new
 MkDocs Material site — running the skill's Phases 0 through 5 essentially
 as-is.
 
+Live example: **[javazone-2026](https://hkvalheim.github.io/javazone-2026/)**.
+
 ## Shape of the job
 
 - 8 talks from one conference, sourced from a mix of YouTube and Vimeo
