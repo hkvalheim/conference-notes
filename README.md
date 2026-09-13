@@ -11,8 +11,8 @@ to the exact timestamp in the source recording.
 📖 **Full docs, security considerations, and use cases:**
 https://hkvalheim.github.io/conference-notes/
 
-![A talk page produced by this skill: an extracted slide screenshot inline with the write-up](assets/example-output.png)
-*A real talk page from [javazone-2026](https://hkvalheim.github.io/javazone-2026/), a site generated with this skill — one of the [use cases](https://hkvalheim.github.io/conference-notes/use-cases/standalone-site/) on the docs site.*
+![A talk page produced by this skill: an extracted slide screenshot with a link back to the exact moment in the recording](assets/example-output.png)
+*A real talk page from [javazone-2026](https://hkvalheim.github.io/javazone-2026/), a site generated with this skill — note the "▶ Se dette i opptaket" link right under the screenshot, linking back to that exact second in the recording. One of the [use cases](https://hkvalheim.github.io/conference-notes/use-cases/standalone-site/) on the docs site.*
 
 ## What it does
 
