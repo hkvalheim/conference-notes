@@ -1,0 +1,47 @@
+site_name: conference-notes
+site_description: An agent skill that turns conference material into a published MkDocs site
+site_url: https://hkvalheim.github.io/conference-notes/
+repo_url: https://github.com/hkvalheim/conference-notes
+repo_name: hkvalheim/conference-notes
+
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Overview: index.md
+  - Installation: installation.md
+  - How it works: how-it-works.md
+  - Security considerations: security.md
+  - Use cases:
+    - Standalone conference site: use-cases/standalone-site.md
+    - Project-local fork: use-cases/project-fork.md
+  - Extending the skill: extending.md
+
+plugins:
+  - search:
+      lang: en
+
+markdown_extensions:
+  - admonition
+  - tables
+  - attr_list
+  - pymdownx.highlight
+  - pymdownx.superfences
