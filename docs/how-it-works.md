@@ -1,8 +1,11 @@
 # How it works
 
-The skill is a set of instructions for an AI coding agent, not a standalone
-program — it works by telling the agent exactly which CLI tools to shell out
-to, in what order, and what to watch out for. Here's what each tool is for.
+The two skills are sets of instructions for an AI coding agent, not a
+standalone program — they work by telling the agent exactly which CLI tools
+to shell out to, in what order, and what to watch out for. `talk-writeup`
+owns the transcript/screenshot/photo tools below; `conference-notes` adds
+`mkdocs` and `gh` on top and calls `talk-writeup` once per talk. Here's what
+each tool is for.
 
 ## `yt-dlp`
 
@@ -58,5 +61,5 @@ whole skill.
 
 GitHub's CLI. Creates the repository, pushes it, and — critically — fixes a
 GitHub Pages default that would otherwise serve `README.md` instead of the
-built site (see the skill's own Phase 5 for the exact `gh api` call this
-requires).
+built site (see `conference-notes`'s own Phase 3 for the exact `gh api` call
+this requires).

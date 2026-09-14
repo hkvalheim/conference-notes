@@ -1,8 +1,9 @@
 # Use case: a standalone conference site
 
-The most direct use of this skill: one conference, one new repo, one new
-MkDocs Material site — running the skill's Phases 0 through 5 essentially
-as-is.
+The most direct use of these skills: one conference, one new repo, one new
+MkDocs Material site — running `conference-notes`'s Phases 1 through 3
+essentially as-is, which for each talk calls `talk-writeup`'s Phase 0
+through 3.
 
 Live example: **[javazone-2026](https://hkvalheim.github.io/javazone-2026/)**.
 
@@ -17,8 +18,8 @@ Live example: **[javazone-2026](https://hkvalheim.github.io/javazone-2026/)**.
   together with cross-cutting themes and a glossary, and inline screenshots
   picked from moments the write-up already quotes.
 - The repo's own `mkdocs.yml` and `.github/workflows/deploy.yml` came
-  straight from the skill's Phase 3 templates, and the GitHub Pages
-  `build_type`/`gh-pages` fix from Phase 5 was needed on first publish, same
+  straight from `conference-notes`'s Phase 2 templates, and the GitHub Pages
+  `build_type`/`gh-pages` fix from Phase 3 was needed on first publish, same
   as documented.
 
 ## Why this is the right shape for a new event

@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 #
-# Installs conference-notes as a self-contained skill for a target code
-# assistant: copies skills/conference-notes/ (SKILL.md + scripts/) to the
-# target skills directory.
+# Installs this repo's skills for a target code assistant: copies each
+# skills/<name>/ directory (SKILL.md + scripts/) to the target skills
+# directory. Installs both skills - conference-notes (full multi-talk site)
+# and talk-writeup (single-talk write-up, no site) - since conference-notes
+# calls into talk-writeup per talk and expects it installed alongside.
 #
-# skills/conference-notes/ in this repo stays the single source of truth for
-# editing - re-run this script after pulling changes to resync installed
-# copies.
+# skills/ in this repo stays the single source of truth for editing -
+# re-run this script after pulling changes to resync installed copies.
 #
 # Usage: ./install.sh <target> [dest]
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILL="conference-notes"
+SKILLS=(conference-notes talk-writeup)
 
 usage() {
   cat <<'EOF'
@@ -76,19 +77,21 @@ if [ -z "$dest" ] || [ "$dest" = "/" ]; then
   exit 1
 fi
 
-src="$SCRIPT_DIR/skills/$SKILL"
-if [ ! -d "$src" ]; then
-  echo "error: $src not found - run from the conference-notes repo root" >&2
-  exit 1
-fi
-
 echo "Installing to: $dest"
 mkdir -p "$dest"
 
-target_dir="$dest/$SKILL"
-echo "  - $SKILL -> $target_dir"
-rm -rf "$target_dir"
-mkdir -p "$target_dir"
-cp -r "$src/." "$target_dir/"
+for SKILL in "${SKILLS[@]}"; do
+  src="$SCRIPT_DIR/skills/$SKILL"
+  if [ ! -d "$src" ]; then
+    echo "error: $src not found - run from the conference-notes repo root" >&2
+    exit 1
+  fi
 
-echo "Done. Installed: $SKILL"
+  target_dir="$dest/$SKILL"
+  echo "  - $SKILL -> $target_dir"
+  rm -rf "$target_dir"
+  mkdir -p "$target_dir"
+  cp -r "$src/." "$target_dir/"
+done
+
+echo "Done. Installed: ${SKILLS[*]}"
