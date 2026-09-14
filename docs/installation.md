@@ -1,20 +1,17 @@
 # Installation
 
-Pick whichever fits how you manage agent skills. There are two skills to
-install: `conference-notes` (the full multi-talk site) and `talk-writeup`
-(a single talk's write-up, which `conference-notes` calls into per talk).
-Install both unless you're certain you'll only ever want one.
+Pick whichever fits how you manage agent skills. All three install the same
+`skills/conference-notes/` folder (`SKILL.md` + its two helper scripts).
 
 ## Option 1 — `gh skill install`
 
 GitHub CLI's native agent-skills support (public preview, CLI v2.90.0+).
-Discovers a skill via its own `skills/<name>/SKILL.md` in this repo and
+Discovers the skill via this repo's `skills/conference-notes/SKILL.md` and
 writes provenance (repo, ref, tree SHA) into the installed copy's
-frontmatter. Run it once per skill:
+frontmatter.
 
 ```bash
 gh skill install hkvalheim/conference-notes conference-notes
-gh skill install hkvalheim/conference-notes talk-writeup
 ```
 
 ## Option 2 — `npx skills add`
@@ -50,18 +47,18 @@ never merges.
 
 ## Dependencies
 
-Each skill checks for its own dependencies before doing any work — see its
-"Prerequisites" section — but for reference, combined:
+The skill itself checks for these before doing any work — see its own
+"Prerequisites" section — but for reference:
 
-| Tool | Needed for | Which skill |
-|---|---|---|
-| `yt-dlp` | Transcript + video download | `talk-writeup` |
-| `ffmpeg` | Frame extraction | `talk-writeup` |
-| `sips` (macOS-builtin) | HEIC → JPEG conversion | `talk-writeup` |
-| `gh` | Repo creation, GitHub Pages config | `conference-notes` |
-| `mkdocs` + `mkdocs-material` | Building and serving the site | `conference-notes` |
-| `curl_cffi` (Vimeo only) | Bypassing Vimeo's Cloudflare Turnstile | `talk-writeup` |
-| `mlx-whisper` (Vimeo only, Apple Silicon) | Local transcription | `talk-writeup` |
+| Tool | Needed for |
+|---|---|
+| `yt-dlp` | Transcript + video download |
+| `ffmpeg` | Frame extraction |
+| `sips` (macOS-builtin) | HEIC → JPEG conversion |
+| `gh` | Repo creation, GitHub Pages config |
+| `mkdocs` + `mkdocs-material` | Building and serving the site |
+| `curl_cffi` (Vimeo only) | Bypassing Vimeo's Cloudflare Turnstile |
+| `mlx-whisper` (Vimeo only, Apple Silicon) | Local transcription |
 
 None of these are auto-installed on your behalf — see
 [Security considerations](security.md) for why that's deliberate.

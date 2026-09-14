@@ -1,15 +1,12 @@
 # conference-notes
 
-Two Claude Code / Copilot CLI agent skills that turn raw conference material —
+A Claude Code / Copilot CLI agent skill that turns raw conference material —
 personal notes, an AI-generated draft, session photos, and a talk recording
 (YouTube, Vimeo, or any other [yt-dlp](https://github.com/yt-dlp/yt-dlp)-supported
-source) — into a write-up: quote-grounded screenshots and links back to the
-exact timestamp in the source recording, either as
-
-- a **single markdown page** for one talk (`talk-writeup`), or
-- a full **[MkDocs Material](https://squidfunk.github.io/mkdocs-material/)
-  site on GitHub Pages**, one enriched page per talk (`conference-notes`,
-  which calls into `talk-writeup` once per talk).
+source) — into a complete conference write-up, published as an
+[MkDocs Material](https://squidfunk.github.io/mkdocs-material/) site on GitHub
+Pages: one enriched page per talk, quote-grounded screenshots, and links back
+to the exact timestamp in the source recording.
 
 📖 **Full docs, security considerations, and use cases:**
 https://hkvalheim.github.io/conference-notes/
@@ -24,25 +21,22 @@ https://hkvalheim.github.io/conference-notes/
 - Extracts screenshots from the moments a quote or claim in the write-up
   already supports — never a blind, evenly-spaced sample.
 - Combines notes, AI drafts, photos, and transcript into one markdown page
-  per talk, with every quote and image linked back to its source timestamp
-  (`talk-writeup`, usable standalone for a single talk).
+  per talk, with every quote and image linked back to its source timestamp.
 - Scaffolds and deploys an MkDocs Material site on GitHub Pages, or — via its
-  documented fork pattern — adapts into an existing site instead
-  (`conference-notes`, for multiple talks; calls `talk-writeup` per talk).
+  documented fork pattern — adapts into an existing site instead.
 
 ## Install
 
 Pick one:
 
 ```bash
-# GitHub CLI (native agent-skills support) - both skills
+# GitHub CLI (native agent-skills support)
 gh skill install hkvalheim/conference-notes conference-notes
-gh skill install hkvalheim/conference-notes talk-writeup
 
 # npx skills
 npx skills add hkvalheim/conference-notes
 
-# Manual clone + install script (installs both skills)
+# Manual clone + install script
 git clone https://github.com/hkvalheim/conference-notes.git
 cd conference-notes
 ./install.sh claude-code            # or: claude-code-project, copilot, copilot-agents, copilot-project, custom <dest>
@@ -54,8 +48,7 @@ with this repo.
 ## Repository layout
 
 ```
-skills/conference-notes/   # full multi-talk site skill (SKILL.md) - calls talk-writeup per talk
-skills/talk-writeup/       # single-talk write-up skill (SKILL.md + scripts/) - the shared mechanics live here
+skills/conference-notes/   # the skill itself (SKILL.md + scripts/) - the installable unit
 docs/                       # this repo's own documentation site source
 mkdocs.yml
 install.sh
