@@ -83,7 +83,8 @@ python3 -m pip install --upgrade curl_cffi
 python3 -m pip install --upgrade mlx-whisper
 ```
 
-And if you want a quick preflight check afterward:
+And if you want a quick preflight check for the standard dependency set
+afterward:
 
 ```bash
 for cmd in yt-dlp ffmpeg sips gh mkdocs; do
