@@ -4,6 +4,47 @@ The skill is a set of instructions for an AI coding agent, not a standalone
 program — it works by telling the agent exactly which CLI tools to shell out
 to, in what order, and what to watch out for. Here's what each tool is for.
 
+## Stack overview
+
+This layered view shows the stack from the underlying hardware up to the AI
+agent using the skill. The model belongs to the host agent, not to the skill
+itself — the skill contributes the workflow, tool choices, and guardrails.
+
+```mermaid
+flowchart TB
+    A[AI agent using the skill<br/>Claude Code / GitHub Copilot CLI / other SKILL.md-compatible agent]
+    B[Model layer<br/>Host agent LLM<br/>for example Claude / GPT / Gemini]
+    C[Skill layer<br/>conference-notes SKILL.md<br/>workflow, phases, guardrails]
+    D[Orchestration layer<br/>CLI calls + helper scripts<br/>parse_vtt.py / extract_frames.sh]
+
+    subgraph E[CLI tools]
+        E1[yt-dlp<br/>transcripts and video download]
+        E2[ffmpeg<br/>frame extraction]
+        E3[sips<br/>image conversion and resizing]
+        E4[gh<br/>repository and Pages setup]
+        E5[mkdocs<br/>site build and local serving]
+    end
+
+    subgraph F[Frameworks and libraries]
+        F1[mkdocs-material<br/>site theme]
+        F2[curl_cffi<br/>TLS impersonation for Vimeo]
+        F3[mlx-whisper<br/>local transcription]
+        F4[MLX<br/>Apple ML framework used by mlx-whisper]
+        F5[Python 3 and shell runtime]
+    end
+
+    G[Operating system<br/>primarily macOS<br/>sips built-in, Apple Silicon path for mlx-whisper]
+    H[Hardware<br/>CPU]
+    I[Apple Silicon GPU / acceleration<br/>used through MLX]
+
+    A --> B --> C --> D --> E
+    D --> F
+    E --> G
+    F --> G
+    G --> H
+    G --> I
+```
+
 ## [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
 
 Fetches transcripts and, when screenshots are wanted, the video itself.
