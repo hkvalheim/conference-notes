@@ -70,7 +70,7 @@ dependency set:
 
 ```bash
 brew install yt-dlp ffmpeg gh
-python3 -m pip install --upgrade mkdocs-material
+python3 -m pip install --upgrade mkdocs mkdocs-material
 ```
 
 `sips` is built into macOS, so there's nothing extra to install for HEIC →
