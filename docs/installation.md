@@ -62,3 +62,31 @@ The skill itself checks for these before doing any work — see its own
 
 None of these are auto-installed on your behalf — see
 [Security considerations](security.md) for why that's deliberate.
+
+### Copy/paste install commands
+
+If you're setting this up on macOS with Homebrew, this gets the standard
+dependency set:
+
+```bash
+brew install yt-dlp ffmpeg gh
+python3 -m pip install --upgrade mkdocs-material
+```
+
+`sips` is built into macOS, so there's nothing extra to install for HEIC →
+JPEG conversion there.
+
+If you also need the Vimeo-only extras:
+
+```bash
+python3 -m pip install --upgrade curl_cffi
+python3 -m pip install --upgrade mlx-whisper
+```
+
+And if you want a quick preflight check afterward:
+
+```bash
+for cmd in yt-dlp ffmpeg sips gh mkdocs; do
+  command -v "$cmd" >/dev/null 2>&1 && echo "OK      $cmd" || echo "MISSING $cmd"
+done
+```
