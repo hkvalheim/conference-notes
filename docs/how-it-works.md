@@ -82,14 +82,6 @@ a missing header. `yt-dlp --impersonate chrome` (via `curl_cffi`) makes the
 request look like a real Chrome TLS handshake, which passes the challenge
 without needing cookies or a manual browser step.
 
-## [`mlx-whisper`](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (Vimeo only, Apple Silicon)
-
-Vimeo recordings typically ship no captions at all, unlike YouTube's
-auto-subs — so the skill transcribes locally. `mlx-whisper` uses the GPU via
-Apple's MLX framework and is much faster than CPU-only Whisper. This is an
-Apple Silicon-specific choice, not a general one — the skill doesn't
-currently document a non-Apple-Silicon transcription path.
-
 ## [`mkdocs`](https://www.mkdocs.org/) + [`mkdocs-material`](https://squidfunk.github.io/mkdocs-material/)
 
 Builds and serves the published site itself — the actual output of the
@@ -101,3 +93,26 @@ GitHub's CLI. Creates the repository, pushes it, and — critically — fixes a
 GitHub Pages default that would otherwise serve `README.md` instead of the
 built site (see the skill's own Phase 5 for the exact `gh api` call this
 requires).
+
+## [`mlx-whisper`](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (Vimeo only, Apple Silicon)
+
+Vimeo recordings typically ship no captions at all, unlike YouTube's
+auto-subs — so the skill transcribes locally. `mlx-whisper` uses the GPU via
+Apple's MLX framework and is much faster than CPU-only Whisper. This is an
+Apple Silicon-specific choice, not a general one — the skill doesn't
+currently document a non-Apple-Silicon transcription path.
+
+For Norwegian specifically, the skill's Phase 0b now documents converting
+[NB-Whisper](https://huggingface.co/NbAiLab/nb-whisper-large) — the National
+Library of Norway's own fine-tune, trained on 66,000 hours of NRK, Storting,
+and National Library speech — to MLX once per machine, and pointing
+`mlx-whisper` at that local conversion instead of the default model. Same
+inference speed as `large-v3` on the same hardware once converted; the
+accuracy gain is free from then on. Worth knowing if you're adapting this
+skill for another lower-resource language: check whether a domain-specific
+fine-tune exists on Hugging Face before assuming the general-purpose model is
+good enough, and verify with a real transcript rather than trusting published
+benchmark numbers alone — a distilled/turbo variant of NB-Whisper looked
+attractive on paper but turned out to drop entire sentences in testing, a gap
+the benchmarks (measured on the full model) didn't surface.
+

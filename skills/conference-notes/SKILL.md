@@ -71,6 +71,7 @@ Vimeo-only extras (Phase 0b) - skip these if every talk is YouTube-sourced:
 |---|---|---|
 | `curl_cffi` | TLS-fingerprint impersonation past Vimeo's Cloudflare Turnstile | `pip3 install curl_cffi` |
 | `mlx-whisper` | Local transcription on Apple Silicon (Vimeo ships no captions) | `pip3 install mlx-whisper` |
+| NB-Whisper MLX conversion (Norwegian talks only) | Much better Norwegian accuracy than the default model - see Phase 0b Step 5 | One-time `torch`+`transformers` conversion, documented inline |
 
 This is a preflight check, not an auto-installer - it never installs anything
 on its own. Deciding to add a new binary to your machine is worth a deliberate
@@ -338,6 +339,68 @@ mlx_whisper media/TALK-SLUG/source.mp4 --language no \
 (swap `--language no` for the talk's actual language). Feed the resulting
 `.vtt` straight into the **same** `scripts/parse_vtt.py` used for YouTube -
 it already handles VTT correctly regardless of source, no changes needed.
+
+#### Norwegian talks - use NB-Whisper, not the default model
+
+With no `--model` flag, `mlx_whisper` falls back to `mlx-community/whisper-tiny`
+- fine for English, weak for Norwegian (76% WER on Fleurs-Bokmål at tiny
+size). Even OpenAI's full `large-v3` is noticeably worse on Norwegian than
+English (10.4% WER vs 8.4%), and it shows up on names specifically: a real
+test transcribing a 5-minute Norwegian talk with `mlx-community/whisper-large-v3-mlx`
+mis-transcribed the energy minister's name as "Terje Åsland" (real:
+**Aasland**) and "Mathilde Tubring-Edde" (real: **Tybring-Gjedde**).
+
+[NB-Whisper](https://huggingface.co/NbAiLab/nb-whisper-large) (National
+Library of Norway, fine-tuned on 66,000 hours of NRK/Storting/Nasjonalbiblioteket
+speech) fixes this - `large`: 2.2% WER on NST-Bokmål vs OpenAI's 6.8%, 6.6%
+vs 10.4% on Fleurs. It has no ready-made MLX conversion in `mlx-community`,
+so convert it once, locally:
+
+```bash
+python3 -m venv /tmp/whisper-convert-venv
+source /tmp/whisper-convert-venv/bin/activate
+pip install -q mlx-whisper torch transformers huggingface_hub tqdm
+
+curl -s -o /tmp/mlx_convert.py \
+  https://raw.githubusercontent.com/ml-explore/mlx-examples/main/whisper/convert.py
+
+python3 /tmp/mlx_convert.py \
+  --torch-name-or-path NbAiLab/nb-whisper-large \
+  --mlx-path ~/.cache/mlx-models/nb-whisper-large-mlx \
+  --dtype float16
+
+# gotcha: convert.py (from the mlx-examples repo, main branch) writes
+# `model.safetensors`, but the installed mlx_whisper pip package's loader
+# looks for `weights.safetensors` specifically - rename it, or the model
+# fails to load with a cryptic `[load_npz] Input must be a zip file` error:
+mv ~/.cache/mlx-models/nb-whisper-large-mlx/model.safetensors \
+   ~/.cache/mlx-models/nb-whisper-large-mlx/weights.safetensors
+```
+
+Then point `mlx_whisper` at the local path instead of a HF repo name:
+
+```bash
+mlx_whisper media/TALK-SLUG/source.mp4 --language no \
+  --model ~/.cache/mlx-models/nb-whisper-large-mlx \
+  --output-format vtt --output-dir media/TALK-SLUG/
+```
+
+Same runtime as vanilla `large-v3-mlx` on the same hardware (~46s for a
+5-minute clip on an M4, verified directly, apples-to-apples) - the accuracy
+gain is free once converted. Converting needs `torch`+`transformers` (a few
+GB, one-time, in a throwaway venv); actual transcription afterward only
+needs `mlx-whisper`. Check `~/.cache/mlx-models/nb-whisper-large-mlx/` for an
+existing conversion before redoing this - it's a one-time, per-machine setup
+step, not a per-talk one.
+
+**Do not reach for `NbAiLab/nb-whisper-large-distil-turbo-beta`** even though
+it converts and runs ~3x faster (15s vs 46s on the same clip) - tested
+directly against `large-v3-mlx` on the same 5-minute Norwegian talk, the
+distilled 2-decoder-layer variant dropped multiple full sentences near the
+end of the clip and produced incoherent, garbled output for roughly the last
+15% of the audio. The published NB-Whisper WER numbers are for the full,
+non-distilled `large` model - they do not transfer to this beta distillation,
+and it is not safe to substitute for speed.
 
 For screenshots, first read the transcript and pick 3-5 moments that
 actually illustrate a concrete point (grep for the moment a concept/tip is
