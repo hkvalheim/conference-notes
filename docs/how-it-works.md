@@ -58,6 +58,12 @@ also wanted.
 `yt-dlp` supports 1800+ sites beyond YouTube; the same approach generally
 works for any of them that ship native captions.
 
+One download often brings several caption tracks for the same video. The
+skill prefers a manual track over the raw auto-caption track (`en-orig`),
+and that over an auto-generated `en` track, which can quietly drop most of
+the text. It also checks words per minute, because a gappy transcript reads
+fine and is still missing text.
+
 ## [`ffmpeg`](https://ffmpeg.org/)
 
 Extracts still frames from a downloaded video at specific timestamps, and is
@@ -65,6 +71,13 @@ used for a quick multi-frame "probe" pass first to check whether a talk has
 any slides or screen-share worth capturing at all — some recordings are
 pure talking-head footage, and forcing a screenshot there adds no
 information a reader doesn't already get from the speaker's photo.
+
+Two more uses come from real runs. In panels and webinars, auto-captions
+don't say who is speaking, so the skill crops the active speaker's name tag
+from a frame at each quote's timestamp before attributing it. To pick a
+screenshot, it tiles several candidate frames into one contact sheet with
+the `xstack` filter, because the right slide is often several seconds away
+from the quote.
 
 ## [`sips`](https://ss64.com/mac/sips.html)
 

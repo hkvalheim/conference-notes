@@ -23,6 +23,10 @@ from raw material to a live site lives here.
 
 Not for: a single blog post about one talk (just write the markdown directly), or sites that already have their own publishing pipeline (adapt Phase 3 rather than overwrite it).
 
+No recording at all - an event recap built from launch pages, docs, and
+changelogs, or a write-up of a codebase - still fits the site this skill
+builds; see [Sources Without a Recording](#sources-without-a-recording).
+
 If the current repo has its own `.claude/skills/conference-notes/` (a
 project-scoped copy, not this user-level one), prefer it - a repo with an
 established site and its own conventions (post frontmatter, cross-link
@@ -73,6 +77,17 @@ Vimeo-only extras (Phase 0b) - skip these if every talk is YouTube-sourced:
 | `mlx-whisper` | Local transcription on Apple Silicon (Vimeo ships no captions) | `pip3 install mlx-whisper` |
 | NB-Whisper MLX conversion (Norwegian talks only) | Much better Norwegian accuracy than the default model - see Phase 0b Step 5 | One-time `torch`+`transformers` conversion, documented inline |
 
+Check the local-transcription fallback too, even for YouTube talks - it's
+what you'll need if captions turn out unusable or stay rate-limited, and a
+cached model is not the same as a runnable CLI (models can sit in
+`~/.cache/huggingface/hub` from an earlier venv while `mlx_whisper` itself
+is no longer on `PATH`):
+
+```bash
+command -v mlx_whisper >/dev/null 2>&1 && echo "OK      mlx_whisper" \
+  || echo "MISSING mlx_whisper (cached models: $(ls ~/.cache/huggingface/hub 2>/dev/null | grep -ci whisper))"
+```
+
 This is a preflight check, not an auto-installer - it never installs anything
 on its own. Deciding to add a new binary to your machine is worth a deliberate
 choice, not a silent side effect of running this skill.
@@ -104,6 +119,44 @@ for url in "URL1" "URL2" "URL3"; do
   yt-dlp --write-auto-subs --write-subs --sub-langs "en.*" --skip-download \
     -o "/tmp/yt_transcripts/%(title)s" "$url"
 done
+```
+
+### Pick the right caption track
+
+`--sub-langs "en.*"` usually downloads several tracks for the same video,
+and they are not equally good. List what arrived before parsing anything:
+
+```bash
+ls -la /tmp/yt_transcripts/
+```
+
+- **A manual track** (uploaded by the channel, e.g. `.en-US.vtt` or a plain
+  `.en.vtt` when `--write-subs` found one) is the best choice by far:
+  punctuated, correctly cased, no rolling duplicates. It doesn't need
+  `parse_vtt.py` - one line per cue is already clean:
+
+  ```bash
+  awk '/-->/{split($1,a,".");t=a[1];txt="";
+       while((getline l)>0 && l!="") txt=txt (txt?" ":"") l;
+       printf "[%s] %s\n",t,txt}' "TALK.en-US.vtt" > transcript.txt
+  ```
+
+- **`.en-orig.vtt`** is the raw auto-caption track in rolling-cue format.
+  When there is no manual track, this is the one to feed into
+  `parse_vtt.py`.
+- **An auto-generated `.en.vtt`** can look complete and still be gappy: a
+  real one-hour webinar produced an 85KB `.en.vtt` that kept only one line
+  per cue and silently dropped the rest. Prefer `en-orig` over it.
+
+**Check for gaps, not just garbage.** The corruption check below catches
+wrong words; it doesn't catch missing ones. A quick sanity check is
+speaking rate - conversational English runs roughly 130-160 words per
+minute, and a transcript well under that is missing text:
+
+```bash
+dur=$(yt-dlp --print duration "URL")     # seconds
+words=$(wc -w < transcript.txt)
+echo "$(( words * 60 / dur )) words/min"
 ```
 
 ### Parse VTT into plain text
@@ -151,6 +204,37 @@ recording by hand. Vimeo's equivalent is a URL fragment on the canonical
 `vimeo.com/ID` page (not the `player.vimeo.com` embed form used for
 downloading): `https://vimeo.com/VIDEO_ID#t=90s`.
 
+### Panels and webinars - verify who said each quote
+
+Auto-captions carry no speaker labels. In a single-speaker talk that
+doesn't matter; in a panel, a podcast, or a Zoom-style webinar, attributing
+a quote to the wrong person is the most damaging error a write-up can make,
+and the transcript alone can't prevent it. Guessing from content ("this
+sounds like the CEO") is wrong surprisingly often.
+
+Instead, check the video at each quote's timestamp. Webinar layouts
+highlight the active speaker and show a name tag; crop it out of a frame
+taken a second or two after the quote starts (speaker switching lags the
+audio slightly):
+
+```bash
+# Name tag in the lower-left of the active-speaker tile - adjust the crop
+# (w:h:x:y as fractions of the frame) to the layout you see in a probe frame
+ffmpeg -y -ss 1834 -i media/TALK-SLUG/source.mp4 -frames:v 1 \
+  -vf "crop=iw*0.3:ih*0.15:iw*0.06:ih*0.8" /tmp/tag_1834.png -loglevel error
+```
+
+Read the crop, and do this for every quote you attribute by name, not just
+the ambiguous ones. This needs the video downloaded (see the screenshots
+section below) even when the talk ends up with no screenshots at all.
+
+The same goes for **product and company names** in any talk. Auto-captions
+spell an unfamiliar name the way it sounds - a launch video for "Xirp"
+captioned it as "Zerp" throughout. Check every proper noun you quote
+against the on-screen logo, slide text, or the product's own site, use the
+correct spelling in the quote, and say once in the post that the captions
+spell it differently so a reader who checks the transcript isn't confused.
+
 Read the resulting `.txt` files with the Read tool - typically ~40-60KB for a
 one-hour talk. Transcripts carry details, anecdotes, and numbers that notes
 and photos alone don't capture - use them actively to enrich the write-ups.
@@ -181,9 +265,25 @@ YouTube's caption endpoint throttles independently of the video endpoint -
 expect an occasional `ERROR: Unable to download video subtitles for 'en':
 HTTP Error 429: Too Many Requests`, especially right after fetching subs for
 a different video. Just retry the same `yt-dlp` command once; it typically
-succeeds on the second attempt without any backoff needed. If it keeps
-failing, proceed on video + prior write-up knowledge alone (see the probing
-step below) rather than blocking the whole task on one transcript.
+succeeds on the second attempt without any backoff needed.
+
+If it keeps failing, the 429 is often on one track only - typically the
+auto-generated `en` track, while the raw `en-orig` track downloads fine.
+Ask for the tracks explicitly instead of `en.*`, and check what was actually
+written rather than trusting the `ERROR` line (yt-dlp prints the error for
+the failing track even when another track in the same run succeeded):
+
+```bash
+yt-dlp --write-auto-subs --sub-langs "en-orig,en" --skip-download \
+  -o "/tmp/yt_transcripts/%(title)s" "https://www.youtube.com/watch?v=VIDEO_ID"
+ls /tmp/yt_transcripts/   # an .en-orig.vtt here means you have a usable transcript
+```
+
+In a real run, `en.*` failed three times in a row while the explicit
+`en-orig,en` request wrote `en-orig` on the first try. If nothing at all is
+written, fall back to local transcription (`mlx_whisper`, see Phase 0b) or
+proceed on video + prior write-up knowledge alone (see the probing step
+below) rather than blocking the whole task on one transcript.
 
 ### Also want screenshots, not just the transcript?
 
@@ -220,6 +320,32 @@ each moment (slides often change mid-sentence) and look at all of them with
 the Read tool before picking - the first frame at a guessed timestamp is
 frequently a mid-transition blur or the wrong slide.
 
+**If none of them match, widen the window, don't give up.** Slides don't
+change on the quote. A speaker often talks about a slide well before or
+after it is on screen - in one real talk the right slide was 15-25 seconds
+*after* the quote, and the frame at the quote showed a different image
+entirely. Search about ±30 seconds around the quote.
+
+**Use a contact sheet to compare candidates in one look.** Rather than
+reading six frames one by one, tile them into one image, in timestamp order:
+
+```bash
+args=(); for t in 678 684 690 696 702 708; do   # works in bash and zsh
+  ffmpeg -y -ss "$t" -i media/TALK-SLUG/source.mp4 -frames:v 1 -vf scale=640:-1 \
+    "/tmp/cand_$t.png" -loglevel error
+  args+=(-i "/tmp/cand_$t.png")
+done
+# 3x2 grid, left-to-right then top-to-bottom = the loop's timestamp order
+ffmpeg -y "${args[@]}" -filter_complex \
+  "xstack=inputs=6:layout=0_0|w0_0|w0+w1_0|0_h0|w0_h0|w0+w1_h0" \
+  /tmp/contact.png -loglevel error
+```
+
+Don't count on labelling the tiles with `drawtext`: Homebrew's `ffmpeg` is
+often built without freetype, and the filter simply doesn't exist. The tile
+order is the label. Extract the winning timestamp again at full resolution
+for the actual screenshot.
+
 **Probe before investing in this, for both new talks and old ones.** Not
 every talk has anything to screenshot. Before grepping for quote timestamps,
 pull 4-5 frames spread evenly across the runtime and look at them:
@@ -242,6 +368,19 @@ done
   talks publish only a static deck): there's no video to extract frames
   from. That's a different, PDF-screenshotting task, out of scope for this
   video-frame workflow - flag it rather than forcing a workaround.
+
+**Short videos (under ~2 minutes) need dense sampling, not a probe.** Five
+frames spread across a 65-second launch video miss most of it - cuts come
+every few seconds. Sample one frame every 4-8 seconds into a contact sheet
+(the `xstack` command above) instead, and treat that as both the probe and
+the candidate search.
+
+**Read product-UI frames at full resolution.** A contact sheet is for
+finding the right moment, not for reading it. Screen recordings of a
+product often show more than the voiceover says - in one launch video the
+full-size frame showed an org-wide policy banner and a "bypass permissions
+on" status line that were unreadable in the sheet and never mentioned in
+the narration. Those details were the most useful thing in the video.
 
 ---
 
@@ -519,6 +658,74 @@ Create one markdown file per talk in `docs/`:
   the organization's own current URL for that resource rather than linking
   to a mirror or an outdated path - a dead link in a "further reading"
   section is worse than no link at all.
+- **Check the current state behind status claims, not just the link.** A
+  link that resolves can still say something different from what you wrote.
+  The typical case is a GitHub issue cited as "open" or "fixed": many repos
+  run a stale bot, and an issue closed by it after N days without activity
+  is neither fixed nor still open. Check `stateReason`, not just `state`:
+
+  ```bash
+  gh issue view 2717 -R OWNER/REPO --json state,stateReason,closedAt
+  # stateReason NOT_PLANNED + a bot's closing comment = closed unfixed
+  ```
+
+- **Compute heading anchors, never hand-write them, for any heading with
+  non-ASCII characters.** MkDocs' default `slugify` drops characters it
+  can't transliterate instead of converting them, so Norwegian `ø` and `æ`
+  vanish (`først` → `frst`) while `å` becomes `a`. The same applies to
+  other non-English headings. A guessed `#...` fragment fails without
+  breaking the build:
+
+  ```bash
+  python3 -c "from markdown.extensions.toc import slugify; \
+    print(slugify('Hva dette betyr for standpunktene våre', '-'))"
+  # hva-dette-betyr-for-standpunktene-vare
+  ```
+
+  Run it with the same Python that runs `mkdocs`, and if `mkdocs.yml` sets
+  `toc: slugify:` (e.g. `pymdownx.slugs`), use that function instead.
+  `mkdocs build --strict` fails on a broken *file* link but only logs a
+  broken *anchor* at `INFO` level - grep for it rather than trusting the
+  exit code:
+
+  ```bash
+  mkdocs build --strict 2>&1 | grep "does not contain an anchor"
+  ```
+
+---
+
+## Sources Without a Recording
+
+Not every write-up has a talk behind it. Two recurring cases fit the same
+site and the same Phase 2 writing standards, but skip Phase 0/0b entirely:
+
+- **An event recap from web pages** - a vendor conference's announcements,
+  read from its recap page, docs, and changelog entries rather than a
+  keynote video. Fetch the pages with a web-fetch tool (they are ordinary
+  HTML, unlike YouTube), ask for exact quotes with their URLs, and quote
+  only what you have verbatim. Treat the whole event as **one source**
+  (one launch round from one organizer), not one source per changelog
+  entry - otherwise a single event dominates any site-wide index of
+  sources. Be explicit about what the pages *don't* say: preview features
+  are often silent on availability by plan, admin controls, or regions, and
+  that gap is frequently the most useful thing to write down.
+- **A codebase as the subject** - a repo analyzed directly (structure,
+  history, docs). There is no transcript step; cite files and commits
+  instead of timestamps.
+
+A third case sits between the two: **a short launch or promo video plus
+the product's own documents.** The video gives you quotes and a few UI
+frames (run Phase 0 as usual), but it's marketing, and the facts a reader
+needs for a decision are usually elsewhere. Read the docs and, above all,
+the terms of service or preview terms - that's where you find what data the
+vendor may use and for what, liability caps, supported platforms, and
+which integrations actually exist. Expect the sources to disagree with each
+other (marketing page vs. docs vs. terms) and say so in the post rather
+than picking the most flattering version.
+
+In the first two cases there are no frames to extract. Use the original pages' own
+images only if their reuse terms allow it - otherwise publish without
+images rather than screenshotting someone else's site.
 
 ---
 
@@ -648,6 +855,18 @@ trigger a fresh deploy against the correct source.
 
 ## Verify with Playwright
 
+**Expect a 404 right after deploy.** Once the deploy workflow finishes
+(`gh run watch --exit-status`), GitHub Pages' CDN can keep returning 404
+for a new page for roughly 30-60 seconds. Retry for a minute or two before
+treating it as a broken deploy:
+
+```bash
+for i in 1 2 3 4 5 6; do
+  code=$(curl -s -o /dev/null -w '%{http_code}' "https://USERNAME.github.io/REPO-NAME/NEW-PAGE/")
+  [ "$code" = 200 ] && break; sleep 15
+done; echo "$code"
+```
+
 If the Playwright MCP is available (`claude mcp add playwright npx @playwright/mcp@latest`):
 
 ```
@@ -722,12 +941,16 @@ extra secrets or broader access are needed.
 ## Verification
 
 - [ ] Every talk with source material has a `docs/<talk>.md` page
-- [ ] Downloaded transcripts were spot-checked for garbled/corrupted captions before being used, and re-transcribed locally (`mlx-whisper`) if unusable
+- [ ] The best available caption track was used (manual over `en-orig` over auto `en`), and transcripts were spot-checked for both garbled and missing text before being used, and re-transcribed locally (`mlx-whisper`) if unusable
+- [ ] In panels and webinars, every quote attributed by name was checked against the speaker's name tag in the video at that timestamp
+- [ ] Proper nouns in quotes (products, companies, people) were checked against on-screen text or the official site, not taken from auto-captions
+- [ ] For launch/promo videos, the product's docs and terms were read, and disagreements between marketing, docs and terms are stated in the post
 - [ ] Vimeo-sourced talks have both a transcript-derived write-up and at least one extracted screenshot
-- [ ] Every screenshot was picked from a quote/claim already in the prose, not a blind interval sample
+- [ ] Every screenshot was picked from a quote/claim already in the prose, not a blind interval sample, and searched about ±30s around it if the first candidates didn't match
 - [ ] Talking-head-only and PDF-only sources were identified by probing first and explicitly skipped, not forced
 - [ ] Every quote and screenshot links back to its exact `&t=Ns` timestamp in the source video (or Vimeo's `#t=Ns` fragment)
-- [ ] Every external "further reading"/reference link was verified to resolve, not just the source recording link
+- [ ] Every external "further reading"/reference link was verified to resolve, not just the source recording link, and status claims (issue open/fixed, preview/GA) match the current state
+- [ ] Every `#anchor` link to a heading with non-ASCII characters was computed with `slugify`, and the build log has no "does not contain an anchor" lines
 - [ ] `docs/index.md` lists all talks with cross-cutting themes and a glossary
 - [ ] Each post has an explicit, consistently-formatted publish/talk date, and both `mkdocs.yml`'s nav and `docs/index.md`'s list are ordered chronologically by it, not by add-order
 - [ ] Photos render inline on their talk pages, sized for the repo (Phase 4, not the Phase 1 preview crops)
