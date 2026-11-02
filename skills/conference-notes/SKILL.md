@@ -77,6 +77,17 @@ Vimeo-only extras (Phase 0b) - skip these if every talk is YouTube-sourced:
 | `mlx-whisper` | Local transcription on Apple Silicon (Vimeo ships no captions) | `pip3 install mlx-whisper` |
 | NB-Whisper MLX conversion (Norwegian talks only) | Much better Norwegian accuracy than the default model - see Phase 0b Step 5 | One-time `torch`+`transformers` conversion, documented inline |
 
+Check the local-transcription fallback too, even for YouTube talks - it's
+what you'll need if captions turn out unusable or stay rate-limited, and a
+cached model is not the same as a runnable CLI (models can sit in
+`~/.cache/huggingface/hub` from an earlier venv while `mlx_whisper` itself
+is no longer on `PATH`):
+
+```bash
+command -v mlx_whisper >/dev/null 2>&1 && echo "OK      mlx_whisper" \
+  || echo "MISSING mlx_whisper (cached models: $(ls ~/.cache/huggingface/hub 2>/dev/null | grep -ci whisper))"
+```
+
 This is a preflight check, not an auto-installer - it never installs anything
 on its own. Deciding to add a new binary to your machine is worth a deliberate
 choice, not a silent side effect of running this skill.
@@ -217,6 +228,13 @@ Read the crop, and do this for every quote you attribute by name, not just
 the ambiguous ones. This needs the video downloaded (see the screenshots
 section below) even when the talk ends up with no screenshots at all.
 
+The same goes for **product and company names** in any talk. Auto-captions
+spell an unfamiliar name the way it sounds - a launch video for "Xirp"
+captioned it as "Zerp" throughout. Check every proper noun you quote
+against the on-screen logo, slide text, or the product's own site, use the
+correct spelling in the quote, and say once in the post that the captions
+spell it differently so a reader who checks the transcript isn't confused.
+
 Read the resulting `.txt` files with the Read tool - typically ~40-60KB for a
 one-hour talk. Transcripts carry details, anecdotes, and numbers that notes
 and photos alone don't capture - use them actively to enrich the write-ups.
@@ -247,9 +265,25 @@ YouTube's caption endpoint throttles independently of the video endpoint -
 expect an occasional `ERROR: Unable to download video subtitles for 'en':
 HTTP Error 429: Too Many Requests`, especially right after fetching subs for
 a different video. Just retry the same `yt-dlp` command once; it typically
-succeeds on the second attempt without any backoff needed. If it keeps
-failing, proceed on video + prior write-up knowledge alone (see the probing
-step below) rather than blocking the whole task on one transcript.
+succeeds on the second attempt without any backoff needed.
+
+If it keeps failing, the 429 is often on one track only - typically the
+auto-generated `en` track, while the raw `en-orig` track downloads fine.
+Ask for the tracks explicitly instead of `en.*`, and check what was actually
+written rather than trusting the `ERROR` line (yt-dlp prints the error for
+the failing track even when another track in the same run succeeded):
+
+```bash
+yt-dlp --write-auto-subs --sub-langs "en-orig,en" --skip-download \
+  -o "/tmp/yt_transcripts/%(title)s" "https://www.youtube.com/watch?v=VIDEO_ID"
+ls /tmp/yt_transcripts/   # an .en-orig.vtt here means you have a usable transcript
+```
+
+In a real run, `en.*` failed three times in a row while the explicit
+`en-orig,en` request wrote `en-orig` on the first try. If nothing at all is
+written, fall back to local transcription (`mlx_whisper`, see Phase 0b) or
+proceed on video + prior write-up knowledge alone (see the probing step
+below) rather than blocking the whole task on one transcript.
 
 ### Also want screenshots, not just the transcript?
 
@@ -334,6 +368,19 @@ done
   talks publish only a static deck): there's no video to extract frames
   from. That's a different, PDF-screenshotting task, out of scope for this
   video-frame workflow - flag it rather than forcing a workaround.
+
+**Short videos (under ~2 minutes) need dense sampling, not a probe.** Five
+frames spread across a 65-second launch video miss most of it - cuts come
+every few seconds. Sample one frame every 4-8 seconds into a contact sheet
+(the `xstack` command above) instead, and treat that as both the probe and
+the candidate search.
+
+**Read product-UI frames at full resolution.** A contact sheet is for
+finding the right moment, not for reading it. Screen recordings of a
+product often show more than the voiceover says - in one launch video the
+full-size frame showed an org-wide policy banner and a "bypass permissions
+on" status line that were unreadable in the sheet and never mentioned in
+the narration. Those details were the most useful thing in the video.
 
 ---
 
@@ -666,7 +713,17 @@ site and the same Phase 2 writing standards, but skip Phase 0/0b entirely:
   history, docs). There is no transcript step; cite files and commits
   instead of timestamps.
 
-In both cases there are no frames to extract. Use the original pages' own
+A third case sits between the two: **a short launch or promo video plus
+the product's own documents.** The video gives you quotes and a few UI
+frames (run Phase 0 as usual), but it's marketing, and the facts a reader
+needs for a decision are usually elsewhere. Read the docs and, above all,
+the terms of service or preview terms - that's where you find what data the
+vendor may use and for what, liability caps, supported platforms, and
+which integrations actually exist. Expect the sources to disagree with each
+other (marketing page vs. docs vs. terms) and say so in the post rather
+than picking the most flattering version.
+
+In the first two cases there are no frames to extract. Use the original pages' own
 images only if their reuse terms allow it - otherwise publish without
 images rather than screenshotting someone else's site.
 
@@ -886,6 +943,8 @@ extra secrets or broader access are needed.
 - [ ] Every talk with source material has a `docs/<talk>.md` page
 - [ ] The best available caption track was used (manual over `en-orig` over auto `en`), and transcripts were spot-checked for both garbled and missing text before being used, and re-transcribed locally (`mlx-whisper`) if unusable
 - [ ] In panels and webinars, every quote attributed by name was checked against the speaker's name tag in the video at that timestamp
+- [ ] Proper nouns in quotes (products, companies, people) were checked against on-screen text or the official site, not taken from auto-captions
+- [ ] For launch/promo videos, the product's docs and terms were read, and disagreements between marketing, docs and terms are stated in the post
 - [ ] Vimeo-sourced talks have both a transcript-derived write-up and at least one extracted screenshot
 - [ ] Every screenshot was picked from a quote/claim already in the prose, not a blind interval sample, and searched about ±30s around it if the first candidates didn't match
 - [ ] Talking-head-only and PDF-only sources were identified by probing first and explicitly skipped, not forced
